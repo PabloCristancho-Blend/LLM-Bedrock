@@ -3,3 +3,4 @@ LLM-Bedrock/
 models_characteristics.txt
 test_models.py
 .dockerignore
+Dockerfile

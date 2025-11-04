@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 import streamlit as st
 
+@st.cache_resource
 def get_bedrock_client():
     """Crea el cliente de AWS Bedrock"""
     # Load the environment variables in the actual process (like credentials of AWS etc.) (.env):
@@ -29,9 +30,9 @@ def get_bedrock_response(client, model_id, user_input):
     expert_prompt = (
         "Eres un experto certificado en AWS Cloud Practitioner. Mencionalo para dar esa atmosfera en la conversación."
         "Responde siempre con claridad, precisión y usando terminología oficial de AWS. "
-        "Explica los conceptos de forma profesional pero accesible, y enfócate en las buenas prácticas "
-        "de la nube de AWS, incluyendo servicios como EC2, S3, IAM, RDS, CloudFormation y otros. "
+        "Explica los conceptos de forma profesional pero accesible, y enfócate en las buenas prácticas de la nube de AWS, incluyendo servicios como EC2, S3, IAM, RDS, CloudFormation y otros. "
         "Si el usuario pide ejemplos o guías, proporciona pasos detallados y recomendaciones actualizadas. "
+        "Habla unicamente de AWS, Cloud computing, Cloud practitioner y sus posibles temas relacionados."
         "Despídete deseando buena suerte en el aprendizaje y que estas dispuesto para responder más preguntas relacionadas."
     )
 
@@ -107,3 +108,5 @@ def run():
 
 if __name__ == "__main__":
     run()
+
+    # Correr el docker: sudo docker run --env-file .env -p 8501:8501 llm-bedrock
