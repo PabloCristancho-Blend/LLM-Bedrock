@@ -4,51 +4,50 @@ import boto3
 from botocore.exceptions import ClientError
 import streamlit as st
 
-
-
-def AgentAI_AWS_bedrock():
-    '''
-    This function establishes a connection with a AWS bedrock service and a certain model.
-    
-    '''
-    # Carga las credenciales AWS (.env):
+def get_bedrock_client():
+    """Crea el cliente de AWS Bedrock"""
+    # Load the environment variables in the actual process (like credentials of AWS etc.) (.env):
     load_dotenv()
 
-    # Reading the environment variables.
-    # → Set the model ID, e.g., Claude 3.
+    # Bring and Store some necesary variables.
     model_id = os.getenv("MODEL_ID")
+    region = os.getenv("AWS_REGION", "us-east-1") # If it doesn't find the environment variable for the region, it takes by default "us-esast-1"
 
     # Create a Bedrock Runtime client in the selected AWS Region.
-    client = boto3.client("bedrock-runtime", region_name="us-east-1") # Each region has different models available.
+    client = boto3.client("bedrock-runtime", region_name=region) # Each region has different models available.
+    
+    # Return the client, and the model_id.
+    return client, model_id
 
-    # System message: Defines the model's rol as an expert.
-    system_prompt = (
-        "Eres un experto certificado en AWS Cloud Practitioner. (Mencionalo y Saluda) "
+def get_bedrock_response(client, model_id, user_input):
+    """
+    Envía el historial de conversación al modelo de AWS Bedrock
+    y devuelve la respuesta del asistente experto.
+    """
+
+    # Prompt base: comportamiento del asistente experto
+    expert_prompt = (
+        "Eres un experto certificado en AWS Cloud Practitioner. Mencionalo para dar esa atmosfera en la conversación."
         "Responde siempre con claridad, precisión y usando terminología oficial de AWS. "
         "Explica los conceptos de forma profesional pero accesible, y enfócate en las buenas prácticas "
         "de la nube de AWS, incluyendo servicios como EC2, S3, IAM, RDS, CloudFormation y otros. "
-        "Si el usuario pide ejemplos o guías, proporciona pasos detallados y recomendaciones actualizadas."
-        "No olvides despedirse y desear buena suerte en el aprendizaje de quien pregunta."
+        "Si el usuario pide ejemplos o guías, proporciona pasos detallados y recomendaciones actualizadas. "
+        "Despídete deseando buena suerte en el aprendizaje y que estas dispuesto para responder más preguntas relacionadas."
     )
-
-    # User message: <Anything related to AWS Cloud practitioner>.
-    user_message = "¿Qué es Amazon EC2 y para qué se utiliza?"
-
 
     # Building the conversation with the system and user messages.
     conversation = [
         {
             "role": "assistant",
-            "content": [{"text": system_prompt}],
+            "content": [{"text": expert_prompt}],
         },
         {
             "role": "user",
-            "content": [{"text": user_message}],
+            "content": [{"text": user_input}],
         }
     ]
 
     try:
-        # Send the message to the model, using a basic inference configuration.
         response = client.converse(
             modelId=model_id,
             messages=conversation,
@@ -58,31 +57,59 @@ def AgentAI_AWS_bedrock():
                 "topP": 0.9},
         )
 
-        # Extract and print the response text.
         response_text = response["output"]["message"]["content"][0]["text"]
-        print("=== Respuesta del experto AWS ===")
-        print(response_text)
+        return response_text
 
     except (ClientError, Exception) as e:
-        print(f"ERROR: Can't invoke '{model_id}'. Reason: {e}")
-        exit(1)
+        return f"⚠️ Error al invocar el modelo: {e}"
+    
+
+def streamlit_chat_app():
+    """Chat con historial acumulativo y scroll automático en Streamlit."""
+    
+    # Configuración de la página
+    st.set_page_config(page_title="AWS Cloud Expert Chat", page_icon="☁️")
+    st.title("☁️ Chat con Experto en AWS (Cloud Practitioner)")
+
+    # Inicializar historial
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # Contenedor principal del chat
+    chat_container = st.container()
+
+    # Entrada del usuario
+    prompt = st.chat_input("Haz una pregunta sobre AWS Cloud...")
+
+    if prompt:
+        # Guardar mensaje del usuario
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # Obtener cliente y modelo
+        client, model_id = get_bedrock_client()
+
+        # Obtener respuesta del modelo
+        with st.spinner("Pensando..."):
+            response = get_bedrock_response(client, model_id, prompt)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # Mostrar todo el historial en el contenedor
+    with chat_container:
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+        # Spacer invisible para forzar scroll al último mensaje
+        st.empty()
 
 
-def test_streamlit():
 
-    # Prueba sencilla de StreamLit.
-    st.title("Demo IA")
-    nombre = st.text_input("Tu nombre:")
-    if st.button("Saludar"):
-        st.write(f"Hola, {nombre} 👋")
+
+
     
 
 def run():
-    # Establish a connection with the AWS Bedrock model:
-    AgentAI_AWS_bedrock()
-
-    # Probar StreamLit.
-    # test_streamlit()
+    # Run StreamLit.
+    streamlit_chat_app()
 
 if __name__ == "__main__":
     run()
