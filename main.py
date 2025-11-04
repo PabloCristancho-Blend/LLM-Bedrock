@@ -38,12 +38,10 @@ def get_bedrock_response(client, model_id, user_input):
     # Building the conversation with the system and user messages.
     conversation = [
         {
-            "role": "assistant",
-            "content": [{"text": expert_prompt}],
-        },
-        {
             "role": "user",
-            "content": [{"text": user_input}],
+            "content": [
+                {"text": f"{expert_prompt}\n\n{user_input}"}
+            ],
         }
     ]
 
