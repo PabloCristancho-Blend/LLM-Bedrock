@@ -64,48 +64,44 @@ def get_bedrock_response(client, model_id, user_input):
         return f"⚠️ Error al invocar el modelo: {e}"
     
 
-def streamlit_chat_app():
-    """Chat con historial acumulativo y scroll automático en Streamlit."""
-    
-    # Configuración de la página
-    st.set_page_config(page_title="AWS Cloud Expert Chat", page_icon="☁️")
-    st.title("☁️ Chat con Experto en AWS (Cloud Practitioner)")
+import streamlit as st
+import time  # solo para simular la espera
 
-    # Inicializar historial
+def streamlit_chat_app():
+    st.set_page_config(page_title="AWS Cloud Expert Chat", page_icon="☁️")
+    st.title("☁️ Chat con Experto en AWS (Cloud practitioner)")
+
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Contenedor principal del chat
     chat_container = st.container()
-
-    # Entrada del usuario
     prompt = st.chat_input("Haz una pregunta sobre AWS Cloud...")
 
     if prompt:
         # Guardar mensaje del usuario
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Obtener cliente y modelo
-        client, model_id = get_bedrock_client()
+        # Mostrar todo el historial hasta ahora
+        with chat_container: 
+            for msg in st.session_state.messages: 
+                with st.chat_message(msg["role"]): 
+                    st.markdown(msg["content"])
 
-        # Obtener respuesta del modelo
-        with st.spinner("Pensando..."):
-            response = get_bedrock_response(client, model_id, prompt)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+        # Placeholder para la respuesta del asistente (spinner)
+        assistant_placeholder = st.empty()
+        with assistant_placeholder.chat_message("assistant"):
+            with st.spinner("Pensando..."):
+                client, model_id = get_bedrock_client()
+                response = get_bedrock_response(client, model_id, prompt)
 
-    # Mostrar todo el historial en el contenedor
-    with chat_container:
-        for msg in st.session_state.messages:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-        # Spacer invisible para forzar scroll al último mensaje
-        st.empty()
+        # Reemplazar el placeholder con la respuesta final
+        assistant_placeholder.empty()  # elimina la burbuja de spinner
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-
-
-
-
-    
+        # Mostrar solo la respuesta final
+        with chat_container:
+            with st.chat_message("assistant"):
+                st.markdown(response)
 
 def run():
     # Run StreamLit.
